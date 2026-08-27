@@ -20,7 +20,7 @@ You are an automated coding agent developing and maintaining this codebase. You 
 
 ## 4. Code Quality & Architecture
 - **Type Safety:** Maintain 100% strict TypeScript types across the backend and frontend. Do not use `any`. Use Hono RPC to export backend endpoint types directly to frontend clients.
-- **Atomic Components:** Follow modular React
+- **Atomic Components:** Follow modular React component design—keep components small, single-purpose, and composable rather than building large monolithic pages.
 
 ## 5. Environment-Specific Configuration
 - **No Hardcoded Environment Values:** This is a boilerplate project used across multiple environments (production, staging, local, etc.). Never hardcode environment-specific, non-secret values (URLs, hostnames, feature flags, etc.) directly in application or config code, and never use a hardcoded value as a fallback/default.

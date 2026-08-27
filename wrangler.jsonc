@@ -13,7 +13,7 @@
     {
       "binding": "DB",
       "database_name": "k-db",
-      "database_id": "6d0a1b7a-e5a6-4afe-bab8-3fcaf4ca0bff",
+      "database_id": "<your-database-id-here>",
       "migrations_dir": "drizzle"
     }
   ],
