@@ -12,8 +12,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "k-123",
-      "database_id": "8d67882b-9502-4baf-92de-66eeb4d8fe46",
+      "database_name": "k-db",
+      "database_id": "bd0757f5-fc77-4cec-9bb3-8b1a8e7c4823",
       "migrations_dir": "drizzle"
     }
   ],
