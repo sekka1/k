@@ -8,36 +8,12 @@ export const users = sqliteTable("users", {
     .notNull()
     .default(false),
   image: text("image"),
-  role: text("role", { enum: ["admin", "partner"] })
+  role: text("role", { enum: ["admin", "user"] })
     .notNull()
-    .default("partner"),
+    .default("user"),
   status: text("status", { enum: ["active", "pending", "deactivated"] })
     .notNull()
     .default("pending"),
-  createdAt: integer("created_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-  updatedAt: integer("updated_at", { mode: "timestamp" })
-    .notNull()
-    .$defaultFn(() => new Date()),
-});
-
-export const referrals = sqliteTable("referrals", {
-  id: text("id").primaryKey(),
-  partnerId: text("partner_id")
-    .notNull()
-    .references(() => users.id),
-  clientName: text("client_name").notNull(),
-  clientEmail: text("client_email"),
-  clientPhone: text("client_phone"),
-  notes: text("notes"),
-  status: text("status", {
-    enum: ["submitted", "contacted", "in_progress", "closed_won", "closed_lost"],
-  })
-    .notNull()
-    .default("submitted"),
-  dealValueCents: integer("deal_value_cents"),
-  estimatedCommissionCents: integer("estimated_commission_cents"),
   createdAt: integer("created_at", { mode: "timestamp" })
     .notNull()
     .$defaultFn(() => new Date()),
@@ -92,5 +68,3 @@ export const verifications = sqliteTable("verifications", {
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-export type Referral = typeof referrals.$inferSelect;
-export type NewReferral = typeof referrals.$inferInsert;

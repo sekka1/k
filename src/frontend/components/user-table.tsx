@@ -1,7 +1,7 @@
 import { StatusBadge } from "@/components/status-badge";
 import type { User, UpdateUserInput } from "@/types";
 
-const ROLES = ["partner", "admin"] as const;
+const ROLES = ["user", "admin"] as const;
 const STATUSES = ["pending", "active", "deactivated"] as const;
 
 export function UserTable({

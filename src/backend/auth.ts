@@ -25,7 +25,7 @@ export function createAuth(env: Env) {
       additionalFields: {
         role: {
           type: "string",
-          defaultValue: "partner",
+          defaultValue: "user",
           input: false,
         },
         status: {

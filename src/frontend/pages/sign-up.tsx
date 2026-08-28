@@ -28,7 +28,7 @@ export function SignUpPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 shadow">
-        <h1 className="text-xl font-semibold">Create your partner account</h1>
+        <h1 className="text-xl font-semibold">Create your account</h1>
         {error && <p className="text-sm text-red-600">{error}</p>}
         <Input placeholder="Full Name" required value={name} onChange={(e) => setName(e.target.value)} />
         <Input

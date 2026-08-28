@@ -1,0 +1,2765 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Zenith Visual Experiment</title>
+
+    <style>
+
+        html,
+        body {
+
+            margin: 0;
+            padding: 0;
+
+            width: 100%;
+            height: 100%;
+
+            background: #111;
+
+            display: flex;
+
+            justify-content: center;
+            align-items: center;
+
+            overflow: hidden;
+        }
+
+
+        canvas {
+
+            width: 1280px;
+            height: 720px;
+
+            display: block;
+
+            cursor: crosshair;
+        }
+
+
+        #controls {
+
+            position: fixed;
+
+            top: 15px;
+            left: 15px;
+
+            padding: 12px 15px;
+
+            background: rgba(0, 0, 0, 0.7);
+
+            color: white;
+
+            font-family: Arial, sans-serif;
+
+            border-radius: 6px;
+
+            user-select: none;
+        }
+
+
+        #arcSlider {
+
+            width: 300px;
+
+            vertical-align: middle;
+        }
+
+
+        #arcCount {
+
+            display: inline-block;
+
+            width: 30px;
+
+            text-align: center;
+
+            font-weight: bold;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div id="controls">
+
+    <label for="arcSlider">
+        Max Arcs:
+    </label>
+
+    <input
+        id="arcSlider"
+        type="range"
+        min="1"
+        max="30"
+        value="5"
+        step="1"
+    >
+
+    <span id="arcCount">
+        5
+    </span>
+
+</div>
+
+
+<canvas
+    id="canvas"
+    width="1280"
+    height="720"
+></canvas>
+
+
+<script>
+
+
+// ================================================================
+// CANVAS
+// ================================================================
+
+const canvas =
+    document.getElementById("canvas");
+
+
+const ctx =
+    canvas.getContext("2d");
+
+
+// ================================================================
+// PLAYER
+// ================================================================
+
+const PLAYER_X =
+    220;
+
+
+const PLAYER_Y =
+    360;
+
+
+// ================================================================
+// TARGET / MOUSE
+// ================================================================
+
+let TARGET_X =
+    900;
+
+
+let TARGET_Y =
+    360;
+
+
+// ================================================================
+// ELLIPSE
+// ================================================================
+
+const ELLIPSE_HEIGHT_RATIO =
+    0.18;
+
+
+const MIN_ELLIPSE_HEIGHT =
+    20;
+
+
+const MAX_ELLIPSE_HEIGHT =
+    180;
+
+
+// ================================================================
+// ARC VISUAL VARIATION
+// ================================================================
+
+const ARC_HEIGHT_VARIATION =
+    0.5;
+
+
+// ================================================================
+// ARC TARGET OFFSET
+// ================================================================
+
+/*
+    Maximum radius around the mouse that
+    an arc's target can be offset.
+
+    The offset can now be in ANY direction.
+*/
+
+const ARC_TARGET_OFFSET_RADIUS =
+    60;
+
+
+/*
+    Chance that a newly created arc permanently
+    locks onto the mouse position from the moment
+    it was created.
+
+    1 / 3 = approximately 33.3%.
+*/
+
+const ARC_TARGET_LOCK_CHANCE =
+    3 / 3;
+
+
+// ================================================================
+// ARC SPAWN SETTINGS
+// ================================================================
+
+let MAX_SWEEPING_ARCS =
+    5;
+
+
+/*
+    Total amount of time it normally takes
+    to fill all available arc slots.
+*/
+
+const ARC_FILL_TIME =
+    1500;
+
+
+/*
+    Chance that the NEXT arc receives an
+    additional random delay.
+*/
+
+const ARC_RANDOM_DELAY_CHANCE =
+    0.30;
+
+
+const MIN_RANDOM_ARC_DELAY =
+    20;
+
+
+const MAX_RANDOM_ARC_DELAY =
+    800;
+
+
+// ================================================================
+// SWORD SETTINGS
+// ================================================================
+
+const MIN_SWORDS_PER_ARC =
+    3;
+
+
+const MAX_SWORDS_PER_ARC =
+    5;
+
+
+const SWORD_SPAWN_INTERVAL =
+    150;
+
+
+const BASE_SWORD_SPEED =
+    45;//37;
+
+
+// ================================================================
+// CLOSE RANGE SPEED
+// ================================================================
+
+const SPEED_REDUCTION_DISTANCE =
+    300;
+
+
+const MAX_CLOSE_SPEED_REDUCTION =
+    0.8;
+
+
+const MIN_CLOSE_SPEED_MULTIPLIER =
+    0.25;
+
+
+// ================================================================
+// COLORS
+// ================================================================
+
+const SWORD_COLORS = [
+
+    "#45D45A",
+
+    "#D88CFF",
+
+    "#E52B83",
+
+    "#55C8E8",
+
+    "#FF7135",
+
+    "#65C94A",
+
+    "#E94B9B",
+
+    "#30205E",
+
+    "#5969D9",
+
+    "#B87842",
+
+    "#7468E8"
+
+];
+
+
+// ================================================================
+// TRAIL
+// ================================================================
+
+const TRAIL_LIFETIME =
+    480;
+
+
+const TRAIL_WIDTH =
+    12;
+
+
+// ================================================================
+// INPUT
+// ================================================================
+
+let mouseHeld =
+    false;
+
+
+// ================================================================
+// SLIDER
+// ================================================================
+
+const arcSlider =
+    document.getElementById("arcSlider");
+
+
+const arcCountDisplay =
+    document.getElementById("arcCount");
+
+
+arcSlider.addEventListener(
+
+    "input",
+
+    function () {
+
+        MAX_SWEEPING_ARCS =
+            Number(arcSlider.value);
+
+
+        arcCountDisplay.textContent =
+            MAX_SWEEPING_ARCS;
+    }
+
+);
+
+
+// ================================================================
+// RANDOM INTEGER
+// ================================================================
+
+function randomInteger(
+
+    min,
+    max
+
+) {
+
+    return Math.floor(
+
+        Math.random() *
+
+        (
+            max -
+            min +
+            1
+        )
+
+    ) + min;
+}
+
+
+// ================================================================
+// RANDOM COLOR
+// ================================================================
+
+function chooseRandomColor() {
+
+    return SWORD_COLORS[
+
+        Math.floor(
+
+            Math.random() *
+            SWORD_COLORS.length
+
+        )
+
+    ];
+}
+
+
+// ================================================================
+// ARC SPAWN COOLDOWN
+// ================================================================
+
+function getArcSpawnCooldown() {
+
+    return (
+
+        ARC_FILL_TIME /
+        MAX_SWEEPING_ARCS
+
+    );
+}
+
+
+// ================================================================
+// RANDOM ARC DELAY
+// ================================================================
+
+function getRandomArcDelay() {
+
+
+    if (
+
+        Math.random() >=
+        ARC_RANDOM_DELAY_CHANCE
+
+    ) {
+
+        return 0;
+    }
+
+
+    return randomInteger(
+
+        MIN_RANDOM_ARC_DELAY,
+
+        MAX_RANDOM_ARC_DELAY
+
+    );
+}
+
+
+// ================================================================
+// RANDOM TARGET OFFSET
+// ================================================================
+
+function createRandomTargetOffset() {
+
+
+    /*
+        Pick a random angle.
+    */
+
+    const angle =
+        Math.random() *
+        Math.PI *
+        2;
+
+
+    /*
+        sqrt gives a uniform distribution
+        throughout the circle instead of making
+        the center disproportionately likely.
+    */
+
+    const radius =
+
+        Math.sqrt(
+            Math.random()
+        )
+
+        *
+
+        ARC_TARGET_OFFSET_RADIUS;
+
+
+    return {
+
+        x:
+            Math.cos(angle) *
+            radius,
+
+        y:
+            Math.sin(angle) *
+            radius
+
+    };
+}
+
+
+// ================================================================
+// SWEEPING ARC CLASS
+// ================================================================
+
+class SweepingArc {
+
+
+    constructor(
+
+        heightModifier,
+
+        targetOffset,
+
+        rotationDirection
+
+    ) {
+
+
+        // --------------------------------------------------------
+        // ARC VISUAL PROPERTIES
+        // --------------------------------------------------------
+
+        this.heightModifier =
+            heightModifier;
+
+
+        this.targetOffsetX =
+            targetOffset.x;
+
+
+        this.targetOffsetY =
+            targetOffset.y;
+
+
+        this.rotationDirection =
+            rotationDirection;
+
+
+        // --------------------------------------------------------
+        // TARGET LOCK
+        // --------------------------------------------------------
+
+        /*
+            Decide ONCE whether this arc locks
+            to the mouse position.
+
+            This decision never changes.
+        */
+
+        this.targetLocked =
+
+            Math.random() <
+            ARC_TARGET_LOCK_CHANCE;
+
+
+        /*
+            If locked, store the exact mouse
+            position from the moment the arc spawned.
+        */
+
+        if (this.targetLocked) {
+
+            this.lockedTargetX =
+                TARGET_X;
+
+
+            this.lockedTargetY =
+                TARGET_Y;
+        }
+
+
+        // --------------------------------------------------------
+        // COLOR
+        // --------------------------------------------------------
+
+        this.color =
+            chooseRandomColor();
+
+
+        // --------------------------------------------------------
+        // RANDOM SWORD COUNT
+        // --------------------------------------------------------
+
+        this.swordsRequired =
+            randomInteger(
+
+                MIN_SWORDS_PER_ARC,
+
+                MAX_SWORDS_PER_ARC
+
+            );
+
+
+        // --------------------------------------------------------
+        // SWORDS
+        // --------------------------------------------------------
+
+        this.swords =
+            [];
+
+
+        this.swordsSpawned =
+            0;
+
+
+        this.spawnTimer =
+            0;
+
+
+        this.finishedFiring =
+            false;
+    }
+
+
+    // ============================================================
+    // GET TARGET
+    // ============================================================
+
+    getTarget() {
+
+
+        let baseX;
+        let baseY;
+
+
+        /*
+            Locked arcs use the position that
+            existed when they spawned.
+
+            Unlocked arcs follow the current mouse.
+        */
+
+        if (this.targetLocked) {
+
+            baseX =
+                this.lockedTargetX;
+
+
+            baseY =
+                this.lockedTargetY;
+
+        }
+
+        else {
+
+            baseX =
+                TARGET_X;
+
+
+            baseY =
+                TARGET_Y;
+        }
+
+
+        return {
+
+            x:
+                baseX +
+                this.targetOffsetX,
+
+            y:
+                baseY +
+                this.targetOffsetY
+
+        };
+    }
+
+
+    // ============================================================
+    // FIRE SWORD
+    // ============================================================
+
+    fireSword() {
+
+
+        if (
+
+            this.swordsSpawned >=
+            this.swordsRequired
+
+        ) {
+
+            this.finishedFiring =
+                true;
+
+            return;
+        }
+
+
+        this.swords.push({
+
+            angle:
+                0,
+
+            trail:
+                [],
+
+            color:
+                this.color
+
+        });
+
+
+        this.swordsSpawned++;
+
+
+        if (
+
+            this.swordsSpawned >=
+            this.swordsRequired
+
+        ) {
+
+            this.finishedFiring =
+                true;
+        }
+    }
+
+
+    // ============================================================
+    // UPDATE
+    // ============================================================
+
+    update(
+
+        deltaTime,
+
+        currentTime
+
+    ) {
+
+
+        // --------------------------------------------------------
+        // FIRE SWORDS
+        // --------------------------------------------------------
+
+        if (
+
+            !this.finishedFiring
+
+        ) {
+
+            this.spawnTimer +=
+                deltaTime;
+
+
+            if (
+
+                this.spawnTimer >=
+                SWORD_SPAWN_INTERVAL
+
+            ) {
+
+                this.spawnTimer -=
+                    SWORD_SPAWN_INTERVAL;
+
+
+                this.fireSword();
+            }
+        }
+
+
+        // --------------------------------------------------------
+        // TARGET
+        // --------------------------------------------------------
+
+        const target =
+            this.getTarget();
+
+
+        // --------------------------------------------------------
+        // SPEED
+        // --------------------------------------------------------
+
+        const angularSpeed =
+            calculateSwordAngularSpeed(
+
+                this.heightModifier,
+
+                target
+
+            );
+
+
+        // --------------------------------------------------------
+        // UPDATE SWORDS
+        // --------------------------------------------------------
+
+        for (
+
+            let i =
+                this.swords.length - 1;
+
+            i >= 0;
+
+            i--
+
+        ) {
+
+
+            const sword =
+                this.swords[i];
+
+
+            // ----------------------------------------------------
+            // MOVE
+            // ----------------------------------------------------
+
+            sword.angle +=
+
+                angularSpeed *
+
+                this.rotationDirection;
+
+
+            // ----------------------------------------------------
+            // POSITION
+            // ----------------------------------------------------
+
+            const position =
+                calculateSwordPosition(
+
+                    sword.angle,
+
+                    this.heightModifier,
+
+                    target
+
+                );
+
+
+            // ----------------------------------------------------
+            // DIRECTION
+            // ----------------------------------------------------
+
+            const direction =
+                calculateSwordDirection(
+
+                    position,
+
+                    target
+
+                );
+
+
+            // ----------------------------------------------------
+            // TRAIL
+            // ----------------------------------------------------
+
+            updateSwordTrail(
+
+                sword,
+
+                position,
+
+                currentTime
+
+            );
+
+
+            drawSwordTrail(
+
+                sword,
+
+                currentTime
+
+            );
+
+
+            // ----------------------------------------------------
+            // DRAW
+            // ----------------------------------------------------
+
+            drawSword(
+
+                sword.color,
+
+                position.x,
+
+                position.y,
+
+                direction
+
+            );
+
+
+            // ----------------------------------------------------
+            // FINISHED
+            // ----------------------------------------------------
+
+            const finished =
+
+                this.rotationDirection === 1
+
+                    ? sword.angle >=
+                      Math.PI * 2
+
+                    : sword.angle <=
+                      -Math.PI * 2;
+
+
+            if (finished) {
+
+                this.swords.splice(
+
+                    i,
+
+                    1
+
+                );
+            }
+        }
+    }
+
+
+    // ============================================================
+    // FINISHED
+    // ============================================================
+
+    isFinished() {
+
+        return (
+
+            this.finishedFiring
+
+            &&
+
+            this.swords.length === 0
+
+        );
+    }
+
+}
+
+
+// ================================================================
+// ZENITH ATTACK CLASS
+// ================================================================
+
+class ZenithAttack {
+
+
+    constructor() {
+
+
+        this.arcs =
+            [];
+
+
+        this.spawnTimer =
+            0;
+
+
+        this.active =
+            false;
+
+
+        this.randomDelay =
+            0;
+    }
+
+
+    // ============================================================
+    // START
+    // ============================================================
+
+    start() {
+
+
+        if (this.active) {
+
+            return;
+        }
+
+
+        this.active =
+            true;
+
+
+        /*
+            Spawn exactly one arc when the attack
+            begins.
+
+            This prevents the initial burst.
+        */
+
+        this.spawnArc();
+
+
+        /*
+            The NEXT arc has to wait the normal
+            spawn interval.
+        */
+
+        this.spawnTimer =
+            0;
+
+
+        this.randomDelay =
+            0;
+    }
+
+
+    // ============================================================
+    // STOP
+    // ============================================================
+
+    stop() {
+
+
+        /*
+            Existing arcs are NOT affected.
+
+            They finish their current paths.
+        */
+
+        this.active =
+            false;
+    }
+
+
+    // ============================================================
+    // SPAWN ARC
+    // ============================================================
+
+    spawnArc() {
+
+
+        if (
+
+            this.arcs.length >=
+            MAX_SWEEPING_ARCS
+
+        ) {
+
+            return false;
+        }
+
+
+        // --------------------------------------------------------
+        // HEIGHT
+        // --------------------------------------------------------
+
+        const heightModifier =
+
+            1 +
+
+            (
+
+                (
+                    Math.random() *
+                    2
+
+                )
+
+                - 1
+
+            )
+
+            *
+
+            ARC_HEIGHT_VARIATION;
+
+
+        // --------------------------------------------------------
+        // TARGET OFFSET
+        // --------------------------------------------------------
+
+        /*
+            This offset is generated once.
+
+            It never changes during the arc's lifetime.
+        */
+
+        const targetOffset =
+            createRandomTargetOffset();
+
+
+        // --------------------------------------------------------
+        // ROTATION
+        // --------------------------------------------------------
+
+        const rotationDirection =
+
+            Math.random() < 0.5
+
+                ? 1
+
+                : -1;
+
+
+        // --------------------------------------------------------
+        // CREATE ARC
+        // --------------------------------------------------------
+
+        const arc =
+            new SweepingArc(
+
+                heightModifier,
+
+                targetOffset,
+
+                rotationDirection
+
+            );
+
+
+        /*
+            Fire first sword immediately.
+        */
+
+        arc.fireSword();
+
+
+        this.arcs.push(
+            arc
+        );
+
+
+        return true;
+    }
+
+
+    // ============================================================
+    // UPDATE
+    // ============================================================
+
+    update(
+
+        deltaTime,
+
+        currentTime
+
+    ) {
+
+
+        // ========================================================
+        // UPDATE EXISTING ARCS
+        // ========================================================
+
+        for (
+
+            let i =
+                this.arcs.length - 1;
+
+            i >= 0;
+
+            i--
+
+        ) {
+
+
+            const arc =
+                this.arcs[i];
+
+
+            arc.update(
+
+                deltaTime,
+
+                currentTime
+
+            );
+
+
+            if (
+
+                arc.isFinished()
+
+            ) {
+
+                this.arcs.splice(
+
+                    i,
+
+                    1
+
+                );
+            }
+        }
+
+
+        // ========================================================
+        // SPAWN CONTROL
+        // ========================================================
+
+        if (!this.active) {
+
+            return;
+        }
+
+
+        // --------------------------------------------------------
+        // RANDOM DELAY
+        // --------------------------------------------------------
+
+        if (
+
+            this.randomDelay > 0
+
+        ) {
+
+
+            this.randomDelay -=
+                deltaTime;
+
+
+            if (
+
+                this.randomDelay > 0
+
+            ) {
+
+                return;
+            }
+
+
+            this.randomDelay =
+                0;
+        }
+
+
+        // --------------------------------------------------------
+        // NORMAL TIMER
+        // --------------------------------------------------------
+
+        this.spawnTimer +=
+            deltaTime;
+
+
+        const cooldown =
+            getArcSpawnCooldown();
+
+
+        if (
+
+            this.spawnTimer >=
+            cooldown
+
+        ) {
+
+
+            if (
+
+                this.arcs.length <
+                MAX_SWEEPING_ARCS
+
+            ) {
+
+
+                const spawned =
+                    this.spawnArc();
+
+
+                if (spawned) {
+
+
+                    /*
+                        Consume only ONE cooldown.
+
+                        This prevents multiple arcs from
+                        spawning during one update because
+                        the timer accumulated too much.
+                    */
+
+                    this.spawnTimer -=
+                        cooldown;
+
+
+                    /*
+                        Decide whether the NEXT arc
+                        receives a random delay.
+                    */
+
+                    this.randomDelay =
+                        getRandomArcDelay();
+                }
+
+            }
+
+        }
+    }
+
+}
+
+
+// ================================================================
+// CREATE ZENITH
+// ================================================================
+
+const zenith =
+    new ZenithAttack();
+
+
+// ================================================================
+// MOUSE MOVE
+// ================================================================
+
+canvas.addEventListener(
+
+    "mousemove",
+
+    function (event) {
+
+
+        const rect =
+            canvas.getBoundingClientRect();
+
+
+        const scaleX =
+            canvas.width /
+            rect.width;
+
+
+        const scaleY =
+            canvas.height /
+            rect.height;
+
+
+        TARGET_X =
+
+            (
+                event.clientX -
+                rect.left
+
+            )
+
+            *
+
+            scaleX;
+
+
+        TARGET_Y =
+
+            (
+                event.clientY -
+                rect.top
+
+            )
+
+            *
+
+            scaleY;
+    }
+
+);
+
+
+// ================================================================
+// MOUSE DOWN
+// ================================================================
+
+canvas.addEventListener(
+
+    "mousedown",
+
+    function () {
+
+
+        mouseHeld =
+            true;
+
+
+        zenith.start();
+
+    }
+
+);
+
+
+// ================================================================
+// MOUSE UP
+// ================================================================
+
+canvas.addEventListener(
+
+    "mouseup",
+
+    function () {
+
+
+        mouseHeld =
+            false;
+
+
+        zenith.stop();
+
+    }
+
+);
+
+
+// ================================================================
+// MOUSE LEAVE
+// ================================================================
+
+canvas.addEventListener(
+
+    "mouseleave",
+
+    function () {
+
+
+        mouseHeld =
+            false;
+
+
+        zenith.stop();
+
+    }
+
+);
+
+
+// ================================================================
+// PLAYER → TARGET DISTANCE
+// ================================================================
+
+function getPlayerTargetDistance(
+
+    target
+
+) {
+
+
+    const dx =
+        target.x -
+        PLAYER_X;
+
+
+    const dy =
+        target.y -
+        PLAYER_Y;
+
+
+    return Math.sqrt(
+
+        dx * dx +
+        dy * dy
+
+    );
+}
+
+
+// ================================================================
+// ELLIPSE HEIGHT
+// ================================================================
+
+function getEllipseHeight(
+
+    distance,
+
+    heightModifier
+
+) {
+
+
+    const height =
+
+        distance *
+
+        ELLIPSE_HEIGHT_RATIO *
+
+        heightModifier;
+
+
+    return Math.max(
+
+        MIN_ELLIPSE_HEIGHT,
+
+        Math.min(
+
+            MAX_ELLIPSE_HEIGHT,
+
+            height
+
+        )
+
+    );
+}
+
+
+// ================================================================
+// CLOSE SPEED MULTIPLIER
+// ================================================================
+
+function getCloseSpeedMultiplier(
+
+    distance
+
+) {
+
+
+    if (
+
+        distance >=
+        SPEED_REDUCTION_DISTANCE
+
+    ) {
+
+        return 1;
+    }
+
+
+    const closeness =
+
+        1 -
+
+        (
+
+            distance /
+            SPEED_REDUCTION_DISTANCE
+
+        );
+
+
+    const smoothCloseness =
+
+        closeness *
+        closeness *
+
+        (
+
+            3 -
+            2 * closeness
+
+        );
+
+
+    const reduction =
+
+        smoothCloseness *
+
+        MAX_CLOSE_SPEED_REDUCTION;
+
+
+    return Math.max(
+
+        MIN_CLOSE_SPEED_MULTIPLIER,
+
+        1 -
+        reduction
+
+    );
+}
+
+
+// ================================================================
+// SWORD POSITION
+// ================================================================
+
+function calculateSwordPosition(
+
+    angle,
+
+    heightModifier,
+
+    target
+
+) {
+
+
+    const centerX =
+
+        (
+
+            PLAYER_X +
+            target.x
+
+        ) / 2;
+
+
+    const centerY =
+
+        (
+
+            PLAYER_Y +
+            target.y
+
+        ) / 2;
+
+
+    const dx =
+        target.x -
+        PLAYER_X;
+
+
+    const dy =
+        target.y -
+        PLAYER_Y;
+
+
+    const distance =
+
+        Math.sqrt(
+
+            dx * dx +
+            dy * dy
+
+        );
+
+
+    if (
+
+        distance < 0.001
+
+    ) {
+
+        return {
+
+            x:
+                PLAYER_X,
+
+            y:
+                PLAYER_Y
+
+        };
+    }
+
+
+    const directionX =
+        dx /
+        distance;
+
+
+    const directionY =
+        dy /
+        distance;
+
+
+    const perpendicularX =
+        -directionY;
+
+
+    const perpendicularY =
+        directionX;
+
+
+    const radiusX =
+        distance / 2;
+
+
+    const ellipseHeight =
+        getEllipseHeight(
+
+            distance,
+
+            heightModifier
+
+        );
+
+
+    const alongX =
+
+        -Math.cos(angle) *
+        radiusX;
+
+
+    const alongY =
+
+        Math.sin(angle) *
+        ellipseHeight;
+
+
+    return {
+
+        x:
+
+            centerX +
+
+            directionX *
+            alongX +
+
+            perpendicularX *
+            alongY,
+
+
+        y:
+
+            centerY +
+
+            directionY *
+            alongX +
+
+            perpendicularY *
+            alongY
+
+    };
+}
+
+
+// ================================================================
+// SWORD DIRECTION
+// ================================================================
+
+function calculateSwordDirection(
+
+    position,
+
+    target
+
+) {
+
+
+    const centerX =
+
+        (
+
+            PLAYER_X +
+            target.x
+
+        ) / 2;
+
+
+    const centerY =
+
+        (
+
+            PLAYER_Y +
+            target.y
+
+        ) / 2;
+
+
+    return Math.atan2(
+
+        centerY -
+        position.y,
+
+        centerX -
+        position.x
+
+    );
+}
+
+
+// ================================================================
+// BASE ANGULAR SPEED
+// ================================================================
+
+function calculateBaseAngularSpeed(
+
+    heightModifier,
+
+    target
+
+) {
+
+
+    const distance =
+        getPlayerTargetDistance(
+            target
+        );
+
+
+    if (
+
+        distance < 1
+
+    ) {
+
+        return 0.01;
+    }
+
+
+    const ellipseHeight =
+        getEllipseHeight(
+
+            distance,
+
+            heightModifier
+
+        );
+
+
+    const a =
+        distance / 2;
+
+
+    const b =
+        ellipseHeight;
+
+
+    const h =
+
+        Math.pow(
+
+            a - b,
+
+            2
+
+        )
+
+        /
+
+        Math.pow(
+
+            a + b,
+
+            2
+
+        );
+
+
+    const circumference =
+
+        Math.PI *
+
+        (
+
+            a +
+            b
+
+        )
+
+        *
+
+        (
+
+            1 +
+
+            (
+
+                3 * h
+
+            )
+
+            /
+
+            (
+
+                10 +
+
+                Math.sqrt(
+
+                    4 -
+                    3 * h
+
+                )
+
+            )
+
+        );
+
+
+    return (
+
+        BASE_SWORD_SPEED *
+
+        Math.PI *
+        2
+
+    )
+
+    /
+
+    circumference;
+}
+
+
+// ================================================================
+// FINAL ANGULAR SPEED
+// ================================================================
+
+function calculateSwordAngularSpeed(
+
+    heightModifier,
+
+    target
+
+) {
+
+
+    const distance =
+        getPlayerTargetDistance(
+            target
+        );
+
+
+    const baseSpeed =
+        calculateBaseAngularSpeed(
+
+            heightModifier,
+
+            target
+
+        );
+
+
+    const closeMultiplier =
+        getCloseSpeedMultiplier(
+
+            distance
+
+        );
+
+
+    return (
+
+        baseSpeed *
+        closeMultiplier
+
+    );
+}
+
+
+// ================================================================
+// UPDATE SWORD TRAIL
+// ================================================================
+
+function updateSwordTrail(
+
+    sword,
+
+    position,
+
+    currentTime
+
+) {
+
+
+    sword.trail.push({
+
+        x:
+            position.x,
+
+        y:
+            position.y,
+
+        time:
+            currentTime
+
+    });
+
+
+    while (
+
+        sword.trail.length > 0
+
+        &&
+
+        currentTime -
+        sword.trail[0].time >
+
+        TRAIL_LIFETIME
+
+    ) {
+
+        sword.trail.shift();
+
+    }
+}
+
+
+// ================================================================
+// DRAW SWORD TRAIL
+// ================================================================
+
+function drawSwordTrail(
+
+    sword,
+
+    currentTime
+
+) {
+
+
+    const trail =
+        sword.trail;
+
+
+    if (
+
+        trail.length < 2
+
+    ) {
+
+        return;
+    }
+
+
+    const leftSide =
+        [];
+
+
+    const rightSide =
+        [];
+
+
+    for (
+
+        let i = 0;
+
+        i < trail.length;
+
+        i++
+
+    ) {
+
+
+        const point =
+            trail[i];
+
+
+        const previous =
+
+            i === 0
+
+                ? trail[i]
+
+                : trail[i - 1];
+
+
+        const next =
+
+            i === trail.length - 1
+
+                ? trail[i]
+
+                : trail[i + 1];
+
+
+        const dx =
+            next.x -
+            previous.x;
+
+
+        const dy =
+            next.y -
+            previous.y;
+
+
+        const length =
+            Math.sqrt(
+
+                dx * dx +
+                dy * dy
+
+            );
+
+
+        if (
+
+            length === 0
+
+        ) {
+
+            continue;
+        }
+
+
+        const perpendicularX =
+            -dy /
+            length;
+
+
+        const perpendicularY =
+            dx /
+            length;
+
+
+        const age =
+            currentTime -
+            point.time;
+
+
+        const agePercent =
+
+            Math.max(
+
+                0,
+
+                Math.min(
+
+                    1,
+
+                    age /
+                    TRAIL_LIFETIME
+
+                )
+
+            );
+
+
+        const width =
+
+            TRAIL_WIDTH *
+
+            (
+
+                1 -
+                agePercent
+
+            );
+
+
+        leftSide.push({
+
+            x:
+
+                point.x +
+
+                perpendicularX *
+                width,
+
+            y:
+
+                point.y +
+
+                perpendicularY *
+                width
+
+        });
+
+
+        rightSide.push({
+
+            x:
+
+                point.x -
+
+                perpendicularX *
+                width,
+
+            y:
+
+                point.y -
+
+                perpendicularY *
+                width
+
+        });
+    }
+
+
+    if (
+
+        leftSide.length < 2
+
+    ) {
+
+        return;
+    }
+
+
+    ctx.save();
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+
+        leftSide[0].x,
+
+        leftSide[0].y
+
+    );
+
+
+    for (
+
+        let i = 1;
+
+        i < leftSide.length;
+
+        i++
+
+    ) {
+
+        ctx.lineTo(
+
+            leftSide[i].x,
+
+            leftSide[i].y
+
+        );
+    }
+
+
+    for (
+
+        let i =
+            rightSide.length - 1;
+
+        i >= 0;
+
+        i--
+
+    ) {
+
+        ctx.lineTo(
+
+            rightSide[i].x,
+
+            rightSide[i].y
+
+        );
+    }
+
+
+    ctx.closePath();
+
+
+    const newest =
+        trail[
+            trail.length - 1
+        ];
+
+
+    const oldest =
+        trail[0];
+
+
+    const gradient =
+        ctx.createLinearGradient(
+
+            oldest.x,
+
+            oldest.y,
+
+            newest.x,
+
+            newest.y
+
+        );
+
+
+    gradient.addColorStop(
+
+        0,
+
+        hexToRGBA(
+
+            sword.color,
+
+            0
+
+        )
+
+    );
+
+
+    gradient.addColorStop(
+
+        0.35,
+
+        hexToRGBA(
+
+            sword.color,
+
+            0.10
+
+        )
+
+    );
+
+
+    gradient.addColorStop(
+
+        0.75,
+
+        hexToRGBA(
+
+            sword.color,
+
+            0.28
+
+        )
+
+    );
+
+
+    gradient.addColorStop(
+
+        1,
+
+        hexToRGBA(
+
+            sword.color,
+
+            0.45
+
+        )
+
+    );
+
+
+    ctx.fillStyle =
+        gradient;
+
+
+    ctx.shadowColor =
+        sword.color;
+
+
+    ctx.shadowBlur =
+        12;
+
+
+    ctx.fill();
+
+
+    ctx.restore();
+}
+
+
+// ================================================================
+// HEX → RGBA
+// ================================================================
+
+function hexToRGBA(
+
+    hex,
+
+    alpha
+
+) {
+
+
+    const r =
+        parseInt(
+
+            hex.substring(
+                1,
+                3
+            ),
+
+            16
+
+        );
+
+
+    const g =
+        parseInt(
+
+            hex.substring(
+                3,
+                5
+            ),
+
+            16
+
+        );
+
+
+    const b =
+        parseInt(
+
+            hex.substring(
+                5,
+                7
+            ),
+
+            16
+
+        );
+
+
+    return (
+
+        "rgba(" +
+
+        r + "," +
+
+        g + "," +
+
+        b + "," +
+
+        alpha +
+
+        ")"
+
+    );
+}
+
+
+// ================================================================
+// SWORD DRAWER
+// ================================================================
+
+function drawSword(
+
+    color,
+
+    x,
+
+    y,
+
+    direction
+
+) {
+
+
+    ctx.save();
+
+
+    ctx.translate(
+
+        x,
+
+        y
+
+    );
+
+
+    ctx.rotate(
+
+        direction
+
+    );
+
+
+    ctx.shadowColor =
+        color;
+
+
+    ctx.shadowBlur =
+        12;
+
+
+    // ------------------------------------------------------------
+    // BLADE
+    // ------------------------------------------------------------
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+
+        32,
+
+        0
+
+    );
+
+
+    ctx.lineTo(
+
+        -8,
+
+        -7
+
+    );
+
+
+    ctx.lineTo(
+
+        -26,
+
+        0
+
+    );
+
+
+    ctx.lineTo(
+
+        -8,
+
+        7
+
+    );
+
+
+    ctx.closePath();
+
+
+    ctx.fillStyle =
+        color;
+
+
+    ctx.fill();
+
+
+    // ------------------------------------------------------------
+    // HIGHLIGHT
+    // ------------------------------------------------------------
+
+    ctx.shadowBlur =
+        0;
+
+
+    ctx.beginPath();
+
+
+    ctx.moveTo(
+
+        27,
+
+        0
+
+    );
+
+
+    ctx.lineTo(
+
+        -7,
+
+        -3
+
+    );
+
+
+    ctx.lineTo(
+
+        -18,
+
+        0
+
+    );
+
+
+    ctx.lineTo(
+
+        -7,
+
+        3
+
+    );
+
+
+    ctx.closePath();
+
+
+    ctx.fillStyle =
+        "#ffffff";
+
+
+    ctx.globalAlpha =
+        0.45;
+
+
+    ctx.fill();
+
+
+    // ------------------------------------------------------------
+    // HANDLE
+    // ------------------------------------------------------------
+
+    ctx.globalAlpha =
+        1;
+
+
+    ctx.fillStyle =
+        "#555";
+
+
+    ctx.fillRect(
+
+        -38,
+
+        -4,
+
+        18,
+
+        8
+
+    );
+
+
+    // ------------------------------------------------------------
+    // GUARD
+    // ------------------------------------------------------------
+
+    ctx.fillStyle =
+        color;
+
+
+    ctx.fillRect(
+
+        -22,
+
+        -11,
+
+        5,
+
+        22
+
+    );
+
+
+    ctx.restore();
+}
+
+
+// ================================================================
+// DRAW POINT
+// ================================================================
+
+function drawPoint(
+
+    x,
+
+    y,
+
+    label
+
+) {
+
+
+    ctx.beginPath();
+
+
+    ctx.arc(
+
+        x,
+
+        y,
+
+        8,
+
+        0,
+
+        Math.PI * 2
+
+    );
+
+
+    ctx.fillStyle =
+        "#ffffff";
+
+
+    ctx.fill();
+
+
+    ctx.font =
+        "18px Arial";
+
+
+    ctx.fillStyle =
+        "#ffffff";
+
+
+    ctx.fillText(
+
+        label,
+
+        x + 14,
+
+        y - 12
+
+    );
+}
+
+
+// ================================================================
+// MAIN LOOP
+// ================================================================
+
+let lastTime =
+    performance.now();
+
+
+function draw(
+
+    currentTime
+
+) {
+
+
+    const deltaTime =
+
+        currentTime -
+        lastTime;
+
+
+    lastTime =
+        currentTime;
+
+
+    // ------------------------------------------------------------
+    // BACKGROUND
+    // ------------------------------------------------------------
+
+    ctx.clearRect(
+
+        0,
+
+        0,
+
+        canvas.width,
+
+        canvas.height
+
+    );
+
+
+    ctx.fillStyle =
+        "#151515";
+
+
+    ctx.fillRect(
+
+        0,
+
+        0,
+
+        canvas.width,
+
+        canvas.height
+
+    );
+
+
+    // ------------------------------------------------------------
+    // ZENITH
+    // ------------------------------------------------------------
+
+    zenith.update(
+
+        deltaTime,
+
+        currentTime
+
+    );
+
+
+    // ------------------------------------------------------------
+    // PLAYER
+    // ------------------------------------------------------------
+
+    drawPoint(
+
+        PLAYER_X,
+
+        PLAYER_Y,
+
+        "PLAYER"
+
+    );
+
+
+    // ------------------------------------------------------------
+    // TARGET
+    // ------------------------------------------------------------
+
+    drawPoint(
+
+        TARGET_X,
+
+        TARGET_Y,
+
+        "TARGET"
+
+    );
+
+
+    // ------------------------------------------------------------
+    // NEXT FRAME
+    // ------------------------------------------------------------
+
+    requestAnimationFrame(
+        draw
+    );
+}
+
+
+// ================================================================
+// START
+// ================================================================
+
+requestAnimationFrame(
+    draw
+);
+
+
+</script>
+
+</body>
+
+</html>

@@ -14,7 +14,7 @@ body:
     attributes:
       label: "What do you want to add or change?"
       description: "Describe what you want to see. Plain English is great!"
-      placeholder: "e.g., I want to add a 'Phone Number' column to the Admin referral table so I can call clients directly from the portal."
+      placeholder: "e.g., I want to add a new app called 'Word Puzzle' under public/apps/word-puzzle and list it on the apps dashboard."
     validations:
       required: true
 

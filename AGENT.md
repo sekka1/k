@@ -4,7 +4,7 @@ You are an automated coding agent developing and maintaining this codebase. You 
 
 ## 1. Security First
 - **No Hardcoded Secrets:** Never hardcode API keys, auth secrets, or tokens in the repository. Access environment variables via Cloudflare Worker bindings (`c.env`).
-- **Strict Authorization:** Enforce Role-Based Access Control (RBAC) on every backend API route. Always verify the session and validate that a `partner` can only read/modify their own referrals (`partnerId === user.id`).
+- **Strict Authorization:** Enforce Role-Based Access Control (RBAC) on every backend API route. Always verify the session and validate that a non-admin `user` can only read/modify their own resources.
 - **Input Sanitization & Validation:** Use `zod` for strict request payload validation on all Hono API endpoints. Never execute raw string interpolation into SQL queries—always use Drizzle ORM query builders or parameterized bindings.
 - **OWASP Best Practices:** Protect against CSRF, set secure HTTP security headers (HSTS, Content Security Policy, X-Frame-Options), and enforce strict CORS settings.
 

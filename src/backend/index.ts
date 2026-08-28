@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
 import { createAuth } from "./auth";
-import { referralsRoute } from "./routes/referrals";
 import { adminUsersRoute } from "./routes/admin-users";
 import type { Env } from "./env";
 import type { AppVariables } from "./middleware/rbac";
@@ -20,7 +19,6 @@ const app = new Hono<{ Bindings: Env; Variables: AppVariables }>()
     const auth = createAuth(c.env);
     return auth.handler(c.req.raw);
   })
-  .route("/api/referrals", referralsRoute)
   .route("/api/admin/users", adminUsersRoute)
   // SPA fallback: any non-API route is served by the static assets binding,
   // which handles single-page-application routing per wrangler.jsonc config.
