@@ -8,7 +8,7 @@ import { requireAuth, requireAdmin, type AppVariables } from "../middleware/rbac
 import type { Env } from "../env";
 
 const updateUserSchema = z.object({
-  role: z.enum(["admin", "partner"]).optional(),
+  role: z.enum(["admin", "user"]).optional(),
   status: z.enum(["active", "pending", "deactivated"]).optional(),
 });
 

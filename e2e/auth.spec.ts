@@ -8,7 +8,7 @@ test.describe("Authentication", () => {
 
   test("sign-up page renders the registration form", async ({ page }) => {
     await page.goto("/sign-up");
-    await expect(page.getByRole("heading", { name: /create your partner account/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /create your account/i })).toBeVisible();
   });
 
   test("sign-in page renders the login form", async ({ page }) => {

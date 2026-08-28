@@ -1,9 +1,13 @@
 # Boiler-plate-webapp-cloudflare
 
-A full-stack boilerplate web application built to run entirely on the Cloudflare
-Workers platform. It is implemented as a "Real Estate Referral Portal" that lets
-**partners** submit and track client referrals while **admins** manage users and
-review all referrals.
+# Boiler-plate-webapp-cloudflare
+
+A full-stack web application built to run entirely on the Cloudflare
+Workers platform. It is an **app launcher**: once a user signs in, they see a
+dashboard listing small self-contained apps (webpages, JavaScript games, etc.)
+that run in the browser. Each app lives in its own sub-folder under
+`public/apps/` and is served as a static file when the user clicks its link.
+**Admins** manage user accounts (approving new sign-ups, assigning roles).
 
 ## Tech Stack
 
@@ -21,21 +25,19 @@ review all referrals.
 ## Features Implemented So Far
 
 - Email/password sign up and sign in (`better-auth`)
-- Role-based access control (RBAC) with `admin` and `partner` roles
+- Role-based access control (RBAC) with `admin` and `user` roles
 - User account status flow: `pending` → `active` / `deactivated`, with a
-  "pending approval" page shown to new partners
-- Partner dashboard for submitting and tracking referrals
-  (client name/email/phone, notes, status, deal value, estimated commission)
-- Admin dashboard for managing users and reviewing all referrals
-- Backend API (Hono) routes for referrals (`/api/referrals`) and admin user
-  management (`/api/admin/users`), enforcing that partners can only access
-  their own referrals
-- Database schema and migrations (Drizzle) for `users`, `referrals`,
-  `sessions`, `accounts`, and `verifications` tables
+  "pending approval" page shown to new users
+- Apps dashboard listing the published apps, each opened as a static page
+  from its own `public/apps/<slug>/` sub-folder
+- Admin dashboard for managing users (roles and account status)
+- Backend API (Hono) routes for admin user management (`/api/admin/users`)
+- Database schema and migrations (Drizzle) for `users`, `sessions`,
+  `accounts`, and `verifications` tables
 - Security hardening: secure HTTP headers, CORS restricted to the configured
   origin, and Zod-based input validation
 - Unit tests for backend routes and end-to-end tests for auth, admin, and
-  partner flows
+  the apps dashboard
 
 ## Project Structure
 
@@ -45,6 +47,7 @@ src/
   db/             Drizzle schema and database access
   frontend/       React app (pages, components, lib)
   tests/          Unit tests
+public/apps/      Static app files, one sub-folder per app
 e2e/              Playwright end-to-end tests
 drizzle/          Generated SQL migrations
 ```
@@ -93,7 +96,7 @@ trusted automatically.
 ### Seeding Initial Users
 
 After applying migrations, you can seed the database with one active user per
-role (`admin` and `partner`) so you can sign in right away:
+role (`admin` and `user`) so you can sign in right away:
 
 ```bash
 npm run db:seed:generate   # (re)generates drizzle/seed/seed.sql with fresh hashed passwords
@@ -106,7 +109,7 @@ Seeded accounts (all use the password `garland123`):
 | Email | Role |
 | --- | --- |
 | `admin@example.com` | admin |
-| `partner@example.com` | partner |
+| `user@example.com` | user |
 
 ## Scripts
 
@@ -145,11 +148,10 @@ through two interfaces only: the live web app and GitHub Issues.
 
 ### 1) Day-to-day operations (zero code / zero GitHub)
 
-- **Partners**: Bookmark
-  `https://k.garlandk.workers.dev`, log in, and use
-  forms/tables to submit and view referrals.
+- **Users**: Bookmark
+  `https://k.garlandk.workers.dev`, log in, and click an app to launch it.
 - **Owner/Admin**: Log in to the same URL, open `/admin`, and approve users or
-  update referral statuses directly in the UI.
+  update account roles/status directly in the UI.
 
 ### 2) Requesting changes (plain-English issue to deployment loop)
 
@@ -166,7 +168,7 @@ Step-by-step:
 
 1. **Submit a request (GitHub Issue)**  
    Example:  
-   > "Add a 'Phone Number' column to the Admin referral table so I can call clients directly from the table."
+   > "Add a new app called 'Word Puzzle' under public/apps/word-puzzle and list it on the dashboard."
 2. **AI agent implements it**  
    A cloud agent (for example GitHub Copilot Workspace, Devin, or an
    issue-triggered bot) reads the issue + `AGENT.md`, writes code, and opens a

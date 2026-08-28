@@ -4,7 +4,7 @@ import { useSession } from "@/lib/auth-client";
 import { SignInPage } from "@/pages/sign-in";
 import { SignUpPage } from "@/pages/sign-up";
 import { PendingApprovalPage } from "@/pages/pending-approval";
-import { PartnerDashboardPage } from "@/pages/partner-dashboard";
+import { AppsPage } from "@/pages/apps-page";
 import { AdminDashboardPage } from "@/pages/admin-dashboard";
 
 type SessionUser = { role?: string; status?: string };
@@ -40,7 +40,7 @@ export default function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <PartnerDashboardPage />
+              <AppsPage />
             </ProtectedRoute>
           }
         />

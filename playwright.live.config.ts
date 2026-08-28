@@ -6,7 +6,7 @@ import { defineConfig } from "@playwright/test";
 // Cloudflare Workers, but can also be run manually:
 //
 //   LIVE_URL=https://k.garlandk.workers.dev \
-//   E2E_TEST_EMAIL=partner@example.com \
+//   E2E_TEST_EMAIL=user@example.com \
 //   E2E_TEST_PASSWORD=<your-test-password> \
 //   npm run test:e2e:live
 //

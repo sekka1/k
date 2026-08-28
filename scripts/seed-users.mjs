@@ -20,7 +20,7 @@ export const SEED_PASSWORD = "garland123";
 
 export const SEED_USERS = [
   { email: "admin@example.com", name: "Admin User", role: "admin", status: "active" },
-  { email: "partner@example.com", name: "Partner User", role: "partner", status: "active" },
+  { email: "user@example.com", name: "Regular User", role: "user", status: "active" },
 ];
 
 function escapeSql(value) {
